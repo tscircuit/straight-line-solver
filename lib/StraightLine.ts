@@ -22,33 +22,32 @@ export class StraightLineSolver extends BaseSolver {
       const sameSide = isSameSide({ start: wp.start, end: wp.end })
 
       if (sameSide) {
-        const dx = Math.abs(wp.start.x - wp.end.x)
-        const dy = Math.abs(wp.start.y - wp.end.y)
-        let uBend = 1
-
-        if (dx > dy) {
-          // horizontal-ish
-          if ((wp.start.y + wp.end.y) / 2 > this.problem.bounds.maxY / 2) {
-            uBend = -1
-          }
-        } else {
-          // vertical-ish
-          if ((wp.start.x + wp.end.x) / 2 > this.problem.bounds.maxX / 2) {
-            uBend = -1
-          }
-        }
-
         const d = this.problem.preferredObstacleToTraceSpacing * 2
-        const points = getDouble45Path({
+        const points1 = getDouble45Path({
           start: wp.start,
           end: wp.end,
           dOffset: d,
-          uBend,
+          uBend: 1,
         })
+        const cost1 = calculateCost({
+          traces: [{ points: points1, d: 0 }],
+          problem: this.problem,
+        })
+        const points2 = getDouble45Path({
+          start: wp.start,
+          end: wp.end,
+          dOffset: d,
+          uBend: -1,
+        })
+        const cost2 = calculateCost({
+          traces: [{ points: points2, d: 0 }],
+          problem: this.problem,
+        })
+
         return {
-          d: 0,
+          d,
           networkId: wp.networkId,
-          points,
+          points: cost1 < cost2 ? points1 : points2,
         }
       }
 
