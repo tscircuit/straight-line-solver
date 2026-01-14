@@ -2,6 +2,7 @@ import { BaseSolver } from "@tscircuit/solver-utils"
 import type { GraphicsObject } from "graphics-debug"
 import { calculateCost } from "./StraightLine/calculateCost"
 import { getDouble45Path } from "./StraightLine/getDouble45Path"
+import { isSameSide } from "./StraightLine/isSameSide"
 import { optimizeStep } from "./StraightLine/optimizeStep"
 import type { TraceState } from "./StraightLine/types"
 import type { OutputTrace, TraceProblem } from "./types"
@@ -18,6 +19,39 @@ export class StraightLineSolver extends BaseSolver {
   constructor(private problem: TraceProblem) {
     super()
     this.traces = this.problem.waypointPairs.map((wp) => {
+      const sameSide = isSameSide({ start: wp.start, end: wp.end })
+
+      if (sameSide) {
+        const dx = Math.abs(wp.start.x - wp.end.x)
+        const dy = Math.abs(wp.start.y - wp.end.y)
+        let uBend = 1
+
+        if (dx > dy) {
+          // horizontal-ish
+          if ((wp.start.y + wp.end.y) / 2 > this.problem.bounds.maxY / 2) {
+            uBend = -1
+          }
+        } else {
+          // vertical-ish
+          if ((wp.start.x + wp.end.x) / 2 > this.problem.bounds.maxX / 2) {
+            uBend = -1
+          }
+        }
+
+        const d = this.problem.preferredObstacleToTraceSpacing * 2
+        const points = getDouble45Path({
+          start: wp.start,
+          end: wp.end,
+          dOffset: d,
+          uBend,
+        })
+        return {
+          d: 0,
+          networkId: wp.networkId,
+          points,
+        }
+      }
+
       const d =
         Math.min(
           Math.abs(wp.end.x - wp.start.x),

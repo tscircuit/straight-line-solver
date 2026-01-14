@@ -1,7 +1,9 @@
 import type { TraceProblem } from "../types"
-import type { TraceState } from "./types"
-import { getDouble45Path } from "./getDouble45Path"
 import { calculateCost } from "./calculateCost"
+import { getDouble45Path } from "./getDouble45Path"
+import { getUPath } from "./getUPath"
+import { isSameSide } from "./isSameSide"
+import type { TraceState } from "./types"
 
 export const optimizeStep = ({
   traces,
@@ -18,8 +20,13 @@ export const optimizeStep = ({
   for (let i = 0; i < nextTraces.length; i++) {
     const wp = problem.waypointPairs[i]
     const t = nextTraces[i]
+
+    if (isSameSide({ start: wp.start, end: wp.end })) {
+      continue
+    }
+
     const oldD = t.d
-    
+
     const cost0 = calculateCost({ traces: nextTraces, problem })
 
     t.d = oldD + stepSize
