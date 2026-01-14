@@ -2,9 +2,9 @@ import { BaseSolver } from "@tscircuit/solver-utils"
 import type { TraceProblem, OutputTrace } from "./types"
 import type { GraphicsObject } from "graphics-debug"
 import { visualizeTraceProblem } from "./visualizeTraceProblem"
-import { getDouble45Path } from "./Straightline/getDouble45Path"
-import { optimizeStep } from "./Straightline/optimizeStep"
-import type { TraceState } from "./Straightline/types"
+import { getDouble45Path } from "./StraightLine/getDouble45Path"
+import { optimizeStep } from "./StraightLine/optimizeStep"
+import type { TraceState } from "./StraightLine/types"
 
 export class StraightLineSolver extends BaseSolver {
   outputTraces: OutputTrace[] = []

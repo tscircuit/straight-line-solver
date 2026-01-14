@@ -1,6 +1,6 @@
 import { expect, test } from "bun:test"
 import { getSvgFromGraphicsObject } from "graphics-debug"
-import { StraightLineSolver } from "lib/Straightline"
+import { StraightLineSolver } from "lib/StraightLine"
 import problem from "./repro01-input.json"
 import type { TraceProblem } from "lib/types.ts"
 

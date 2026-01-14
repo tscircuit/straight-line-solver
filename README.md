@@ -2,9 +2,7 @@
 
 # Straight Line Solver
 
-An iterative PCB trace router that uses a 1-parameter (d) 45-degree path solver to avoid obstacles and other traces.
-
-## Overview
+An iterative PCB trace router that uses a 1-parameter (d) 45-degree path solver to avoid obstacles and other traces.## Overview
 
 This project provides a TypeScript-based solver for routing traces on a printed circuit board (PCB). It uses a "Double-45" pathfinding strategy, where each trace is composed of two 45-degree segments and a straight middle segment.
 

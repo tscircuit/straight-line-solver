@@ -1,5 +1,5 @@
 import { generateRandomProblem } from "../../utils/index.ts"
-import { StraightLineSolver } from "../../lib/Straightline.ts"
+import { StraightLineSolver } from "../../lib/StraightLine.ts"
 
 const NUM_PROBLEMS = 25
 const MIN_WAYPOINT_PAIRS = 2
