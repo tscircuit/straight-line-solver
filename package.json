@@ -1,0 +1,39 @@
+{
+  "name": "@tscircuit/45-degree-trace-solver",
+  "description": "A solver for routing PCB traces using 45-degree angled paths with elbow joints",
+  "main": "dist/index.js",
+  "version": "0.0.10",
+  "type": "module",
+  "scripts": {
+    "start": "cosmos",
+    "format": "biome format --write .",
+    "format:check": "biome format .",
+    "build": "tsup ./lib/index.ts --format esm --dts",
+    "build:site": "cosmos-export"
+  },
+  "files": [
+    "dist"
+  ],
+  "dependencies": {
+    "react": "^18.2.0",
+    "react-dom": "^18.2.0"
+  },
+  "devDependencies": {
+    "@biomejs/biome": "^2.3.11",
+    "@tscircuit/hypergraph": "^0.0.11",
+    "@tscircuit/math-utils": "^0.0.32",
+    "@tscircuit/solver-utils": "^0.0.13",
+    "@types/bun": "latest",
+    "@types/react": "^18.2.0",
+    "@types/react-dom": "^18.2.0",
+    "bun-match-svg": "^0.0.15",
+    "graphics-debug": "^0.0.76",
+    "react-cosmos": "^7.1.0",
+    "react-cosmos-plugin-vite": "^7.1.0",
+    "tsup": "^8.5.1",
+    "vite": "^7.3.1"
+  },
+  "peerDependencies": {
+    "typescript": "^5"
+  }
+}

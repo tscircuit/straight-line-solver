@@ -1,0 +1,436 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>45° PCB Path Solver</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        body { background: #0f172a; color: #f8fafc; margin: 0; overflow: hidden; font-family: sans-serif; }
+        .canvas-container { position: relative; width: 100vw; height: 100vh; display: flex; align-items: center; justify-content: center; }
+        svg { background: #1e293b; box-shadow: 0 0 50px rgba(0,0,0,0.5); border-radius: 8px; max-width: 90vw; max-height: 90vh; transition: all 0.3s ease; }
+        .controls { position: absolute; top: 20px; left: 20px; background: rgba(30, 41, 59, 0.9); backdrop-filter: blur(12px); padding: 20px; border-radius: 12px; border: 1px solid rgba(255,255,255,0.1); width: 320px; z-index: 10; max-height: 90vh; overflow-y: auto; }
+        .btn { background: #3b82f6; color: white; border: none; padding: 10px 16px; border-radius: 8px; cursor: pointer; transition: all 0.2s; font-weight: 600; width: 100%; margin-bottom: 8px; }
+        .btn:hover { background: #2563eb; transform: translateY(-1px); }
+        .btn-secondary { background: #475569; }
+        .stat-card { background: rgba(15, 23, 42, 0.6); padding: 12px; border-radius: 8px; margin-top: 12px; font-family: monospace; font-size: 0.85rem; border: 1px solid rgba(255,255,255,0.05); }
+        .setting-group { margin-top: 16px; border-top: 1px solid rgba(255,255,255,0.1); padding-top: 16px; }
+        .label-row { display: flex; justify-content: space-between; font-size: 0.75rem; color: #94a3b8; margin-bottom: 4px; }
+        input[type=range] { width: 100%; height: 6px; background: #334155; border-radius: 3px; appearance: none; cursor: pointer; }
+        input[type=range]::-webkit-slider-thumb { appearance: none; width: 14px; height: 14px; background: #3b82f6; border-radius: 50%; }
+    </style>
+</head>
+<body>
+
+<div class="canvas-container" id="app-root">
+    <div class="controls">
+        <h2 class="text-xl font-bold mb-4 flex items-center gap-2">
+            <span class="text-blue-400">⚡</span> PCB Solver v2
+        </h2>
+        
+        <div class="flex gap-2">
+            <button class="btn" id="step-btn">Step</button>
+            <button class="btn btn-secondary" id="reset-btn">Reset</button>
+        </div>
+        <button class="btn" id="auto-btn">Start Auto-Solve</button>
+
+        <div class="stat-card">
+            <div class="flex justify-between mb-1">
+                <span>Iteration:</span>
+                <span id="iter-count">0</span>
+            </div>
+            <div class="flex justify-between">
+                <span>Total Cost:</span>
+                <span id="total-cost" class="text-blue-400">0.00</span>
+            </div>
+        </div>
+
+        <div class="setting-group">
+            <div class="label-row">
+                <span>Target Spacing</span>
+                <span id="val-spacing">0.3</span>
+            </div>
+            <input type="range" id="set-spacing" min="0.05" max="1.5" step="0.05" value="0.3">
+
+            <div class="label-row mt-3">
+                <span>Min Angle (deg)</span>
+                <span id="val-min-angle">90</span>
+            </div>
+            <input type="range" id="set-min-angle" min="45" max="175" step="5" value="90">
+
+            <div class="label-row mt-3">
+                <span>Collision Hardness</span>
+                <span id="val-collision">500</span>
+            </div>
+            <input type="range" id="set-collision" min="10" max="1000" step="10" value="500">
+
+            <div class="label-row mt-3">
+                <span>Boundary Aversion</span>
+                <span id="val-aversion">200</span>
+            </div>
+            <input type="range" id="set-aversion" min="0" max="1000" step="10" value="200">
+
+            <div class="label-row mt-3">
+                <span>Annealing (Decay)</span>
+                <span id="val-decay">Enabled</span>
+            </div>
+            <div class="flex items-center gap-2 text-xs">
+                <input type="checkbox" id="set-decay" checked>
+                <span>Slowly shrink initial spacing</span>
+            </div>
+        </div>
+    </div>
+
+    <svg id="canvas" preserveAspectRatio="xMidYMid meet"></svg>
+</div>
+
+<script>
+const PROBLEM = {
+    bounds: {
+        minX: 6.25,
+        minY: -11.64,
+        maxX: 9.75,
+        maxY: -9.64
+    },
+    waypointPairs: [
+        { start: { x: 6.25, y: -10.795 }, end: { x: 8.595, y: -9.64 }, networkId: "source_trace_3" },
+        { start: { x: 6.25, y: -10.175 }, end: { x: 8.285, y: -9.64 }, networkId: "source_trace_2" },
+        { start: { x: 6.25, y: -11.105 }, end: { x: 9.215, y: -9.64 }, networkId: "source_trace_4" },
+        { start: { x: 6.25, y: -11.415000000000001 }, end: { x: 9.525, y: -9.64 }, networkId: "source_trace_5" },
+        { start: { x: 6.25, y: -9.865 }, end: { x: 7.975, y: -9.64 }, networkId: "source_trace_1" }
+    ],
+    obstacles: [
+        { 
+            points: [
+                {x: 6.25, y: -9.64}, 
+                {x: 7.75, y: -9.64}, 
+                {x: 7.75, y: -8.14}, 
+                {x: 6.25, y: -8.14}
+            ] 
+        }
+    ]
+};
+
+const SETTINGS = {
+    spacing: 0.3,
+    minAngle: 90,
+    collisionWeight: 500,
+    aversionWeight: 200,
+    useDecay: true
+};
+
+class PcbSolver {
+    constructor(problem) {
+        this.problem = problem;
+        this.iteration = 0;
+        this.traces = [];
+        this.reset();
+    }
+
+    reset() {
+        this.iteration = 0;
+        const b = this.problem.bounds;
+        const W = b.maxX - b.minX, H = b.maxY - b.minY;
+        const perimeter = 2 * W + 2 * H;
+
+        const getT = p => {
+            const eps = 1e-6;
+            if (Math.abs(p.y - b.maxY) < eps) return p.x - b.minX;
+            if (Math.abs(p.x - b.maxX) < eps) return W + (b.maxY - p.y);
+            if (Math.abs(p.y - b.minY) < eps) return W + H + (b.maxX - p.x);
+            if (Math.abs(p.x - b.minX) < eps) return 2 * W + H + (p.y - b.minY);
+            return 0;
+        };
+
+        const contains = (a1, a2, b1, b2) => {
+            const norm = t => ((t % perimeter) + perimeter) % perimeter;
+            const a1n = norm(a1), a2n = norm(a2), b1n = norm(b1), b2n = norm(b2);
+            const [am, aM] = a1n < a2n ? [a1n, a2n] : [a2n, a1n];
+            return b1n > am && b1n < aM && b2n > am && b2n < aM;
+        };
+
+        this.traces = this.problem.waypointPairs.map((wp, i) => {
+            const t1 = getT(wp.start), t2 = getT(wp.end);
+            return {
+                start: { ...wp.start },
+                end: { ...wp.end },
+                t1, t2, id: i,
+                elbow: { x: (wp.start.x + wp.end.x) / 2, y: (wp.start.y + wp.end.y) / 2 }
+            };
+        });
+
+        this.traces.forEach(t => {
+            t.containedBy = this.traces.filter(o => o.id !== t.id && contains(o.t1, o.t2, t.t1, t.t2)).map(o => o.id);
+        });
+    }
+
+    getEffectiveSpacing() {
+        if (!SETTINGS.useDecay) return SETTINGS.spacing;
+        const progress = Math.min(1, this.iteration / 1000);
+        return SETTINGS.spacing + (0.3 * (1 - progress));
+    }
+
+    distSq(p1, p2) { return (p1.x - p2.x)**2 + (p1.y - p2.y)**2; }
+
+    ptSegDistSq(px, py, sx, sy, ex, ey) {
+        const dx = ex - sx, dy = ey - sy, l2 = dx * dx + dy * dy;
+        if (l2 === 0) return (px - sx)**2 + (py - sy)**2;
+        let t = Math.max(0, Math.min(1, ((px - sx) * dx + (py - sy) * dy) / l2));
+        return (px - (sx + t * dx))**2 + (py - (sy + t * dy))**2;
+    }
+
+    segSegDistSq(a1, a2, b1, b2) {
+        if (this.intersects(a1, a2, b1, b2)) return 0;
+        return Math.min(
+            this.ptSegDistSq(a1.x, a1.y, b1.x, b1.y, b2.x, b2.y),
+            this.ptSegDistSq(a2.x, a2.y, b1.x, b1.y, b2.x, b2.y),
+            this.ptSegDistSq(b1.x, b1.y, a1.x, a1.y, a2.x, a2.y),
+            this.ptSegDistSq(b2.x, b2.y, a1.x, a1.y, a2.x, a2.y)
+        );
+    }
+
+    intersects(a, b, c, d) {
+        const det = (b.x - a.x) * (d.y - c.y) - (b.y - a.y) * (d.x - c.x);
+        if (det === 0) return false;
+        const lambda = ((d.y - c.y) * (d.x - a.x) + (c.x - d.x) * (d.y - a.y)) / det;
+        const gamma = ((a.y - b.y) * (d.x - a.x) + (b.x - a.x) * (d.y - a.y)) / det;
+        return (0 < lambda && lambda < 1) && (0 < gamma && gamma < 1);
+    }
+
+    getInwardDir(p) {
+        const b = this.problem.bounds;
+        const eps = 1e-6;
+        if (Math.abs(p.y - b.maxY) < eps) return { x: 0, y: -1 };
+        if (Math.abs(p.y - b.minY) < eps) return { x: 0, y: 1 };
+        if (Math.abs(p.x - b.maxX) < eps) return { x: -1, y: 0 };
+        if (Math.abs(p.x - b.minX) < eps) return { x: 1, y: 0 };
+        return { x: 0, y: 0 };
+    }
+
+    getElbowAngle(t) {
+        const v1 = { x: t.start.x - t.elbow.x, y: t.start.y - t.elbow.y };
+        const v2 = { x: t.end.x - t.elbow.x, y: t.end.y - t.elbow.y };
+        const dot = v1.x * v2.x + v1.y * v2.y;
+        const mag = Math.sqrt(v1.x * v1.x + v1.y * v1.y) * Math.sqrt(v2.x * v2.x + v2.y * v2.y);
+        return mag === 0 ? 180 : Math.acos(Math.max(-1, Math.min(1, dot / mag))) * 180 / Math.PI;
+    }
+
+    calculateCost() {
+        let total = 0;
+        const effSpacing = this.getEffectiveSpacing();
+        const eps = 1e-9;
+        const b = this.problem.bounds;
+
+        for (const t of this.traces) {
+            const angle = this.getElbowAngle(t);
+            if (angle < SETTINGS.minAngle) total += (SETTINGS.minAngle - angle) * 10;
+
+            const dir1 = this.getInwardDir(t.start), dir2 = this.getInwardDir(t.end);
+            const d1 = (t.elbow.x - t.start.x) * dir1.x + (t.elbow.y - t.start.y) * dir1.y;
+            const d2 = (t.elbow.x - t.end.x) * dir2.x + (t.elbow.y - t.end.y) * dir2.y;
+            const myDepth = Math.min(d1, d2);
+
+            const distToLeft = t.elbow.x - b.minX;
+            const distToRight = b.maxX - t.elbow.x;
+            const distToBottom = t.elbow.y - b.minY;
+            const distToTop = b.maxY - t.elbow.y;
+            const minDist = Math.min(distToLeft, distToRight, distToBottom, distToTop);
+            
+            // Boundary Repulsion: Always push away
+            total += (0.01 / (minDist + 0.005)) * SETTINGS.aversionWeight;
+
+            for (const outId of t.containedBy) {
+                const out = this.traces[outId];
+                const odir1 = this.getInwardDir(out.start), odir2 = this.getInwardDir(out.end);
+                const od1 = (out.elbow.x - out.start.x) * odir1.x + (out.elbow.y - out.start.y) * odir1.y;
+                const od2 = (out.elbow.x - out.end.x) * odir2.x + (out.elbow.y - out.end.y) * odir2.y;
+                const outDepth = Math.min(od1, od2);
+                if (myDepth < outDepth + effSpacing) total += (outDepth + effSpacing - myDepth) ** 2 * 5000;
+            }
+        }
+
+        for (let i = 0; i < this.traces.length; i++) {
+            const t = this.traces[i];
+            const b = this.problem.bounds;
+            if (t.elbow.x < b.minX + 0.005 || t.elbow.x > b.maxX - 0.005 || t.elbow.y < b.minY + 0.005 || t.elbow.y > b.maxY - 0.005) {
+                total += 10000000;
+            }
+
+            const segsT = [[t.start, t.elbow], [t.elbow, t.end]];
+
+            for (let j = i + 1; j < this.traces.length; j++) {
+                const o = this.traces[j];
+                const segsO = [[o.start, o.elbow], [o.elbow, o.end]];
+
+                for (const s1 of segsT) {
+                    for (const s2 of segsO) {
+                        const d2 = this.segSegDistSq(s1[0], s1[1], s2[0], s2[1]);
+                        if (d2 < eps) total += 5000000;
+                        else if (d2 < effSpacing ** 2) {
+                            total += (effSpacing - Math.sqrt(d2)) ** 2 * SETTINGS.collisionWeight * 2;
+                        }
+                    }
+                }
+            }
+
+            this.problem.obstacles.forEach(obs => {
+                for (let k = 0; k < obs.points.length; k++) {
+                    const p1 = obs.points[k], p2 = obs.points[(k + 1) % obs.points.length];
+                    for (const s of segsT) {
+                        const d2 = this.segSegDistSq(s[0], s[1], p1, p2);
+                        if (d2 < eps) total += 5000000;
+                        else if (d2 < effSpacing ** 2) {
+                            total += (effSpacing - Math.sqrt(d2)) ** 2 * SETTINGS.collisionWeight * 2;
+                        }
+                    }
+                }
+            });
+        }
+        return total;
+    }
+
+    step() {
+        const progress = Math.min(1, this.iteration / 1000);
+        const stepSize = Math.max(0.001, 0.1 * (1 - progress));
+        const b = this.problem.bounds;
+        const margin = 0.001;
+
+        // Shuffle trace order to prevent fixed bias
+        const indices = this.traces.map((_, i) => i).sort(() => Math.random() - 0.5);
+
+        indices.forEach(idx => {
+            const t = this.traces[idx];
+            let bestX = t.elbow.x;
+            let bestY = t.elbow.y;
+            let minCost = this.calculateCost();
+
+            const dirs = [
+                {x: 1, y: 0}, {x: -1, y: 0}, {x: 0, y: 1}, {x: 0, y: -1},
+                {x: 0.7, y: 0.7}, {x: -0.7, y: 0.7}, {x: 0.7, y: -0.7}, {x: -0.7, y: -0.7}
+            ].sort(() => Math.random() - 0.5); // Shuffle direction check order
+
+            for (const dir of dirs) {
+                const ox = t.elbow.x;
+                const oy = t.elbow.y;
+
+                // Move and Clamp
+                t.elbow.x = Math.max(b.minX + margin, Math.min(b.maxX - margin, ox + dir.x * stepSize));
+                t.elbow.y = Math.max(b.minY + margin, Math.min(b.maxY - margin, oy + dir.y * stepSize));
+
+                const cost = this.calculateCost();
+                if (cost < minCost) {
+                    minCost = cost;
+                    bestX = t.elbow.x;
+                    bestY = t.elbow.y;
+                }
+                
+                // Revert for next direction check
+                t.elbow.x = ox;
+                t.elbow.y = oy;
+            }
+
+            t.elbow.x = bestX;
+            t.elbow.y = bestY;
+        });
+
+        this.iteration++;
+    }
+}
+
+const svg = document.getElementById('canvas');
+const solver = new PcbSolver(PROBLEM);
+let autoSolving = false;
+
+function render() {
+    const b = PROBLEM.bounds;
+    const pad = (b.maxX - b.minX) * 0.25;
+    
+    const width = (b.maxX - b.minX) + pad * 2;
+    const height = (b.maxY - b.minY) + pad * 2;
+    svg.setAttribute('viewBox', `${b.minX-pad} ${-(b.maxY+pad)} ${width} ${height}`);
+    
+    let html = `
+        <defs>
+            <marker id="arrow" viewBox="0 0 10 10" refX="5" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse">
+                <path d="M 0 0 L 10 5 L 0 10 z" fill="#94a3b8" />
+            </marker>
+        </defs>
+        <g transform="scale(1, -1)">
+            <rect x="${b.minX}" y="${b.minY}" width="${b.maxX-b.minX}" height="${b.maxY-b.minY}" fill="#0f172a" stroke="#334155" stroke-width="0.01" />
+    `;
+
+    const ax = b.minX - pad * 0.6;
+    const ay = b.minY - pad * 0.6;
+    const aSize = (b.maxX - b.minX) * 0.15;
+    
+    html += `
+            <g stroke="#94a3b8" stroke-width="0.005" fill="none">
+                <line x1="${ax}" y1="${ay}" x2="${ax + aSize}" y2="${ay}" marker-end="url(#arrow)" />
+                <line x1="${ax}" y1="${ay}" x2="${ax}" y2="${ay + aSize}" marker-end="url(#arrow)" />
+            </g>
+            <g transform="scale(1, -1)" fill="#94a3b8" font-size="0.04" font-family="monospace">
+                <text x="${ax + aSize}" y="${-ay + 0.05}">X+</text>
+                <text x="${ax - 0.08}" y="${-(ay + aSize) - 0.01}">Y+</text>
+            </g>
+    `;
+
+    PROBLEM.obstacles.forEach(obs => {
+        const pts = obs.points.map(p => `${p.x},${p.y}`).join(' ');
+        html += `<polygon points="${pts}" fill="#e11d48" fill-opacity="0.3" stroke="#f43f5e" stroke-width="0.03" />`;
+    });
+
+    solver.traces.forEach(t => {
+        html += `
+            <path d="M ${t.start.x} ${t.start.y} L ${t.elbow.x} ${t.elbow.y} L ${t.end.x} ${t.end.y}" 
+                  fill="none" stroke="#3b82f6" stroke-width="0.05" stroke-linecap="round" stroke-linejoin="round" opacity="0.9" />
+            <circle cx="${t.start.x}" cy="${t.start.y}" r="0.03" fill="#64748b" />
+            <circle cx="${t.end.x}" cy="${t.end.y}" r="0.03" fill="#64748b" />
+        `;
+    });
+    
+    html += `</g>`;
+
+    svg.innerHTML = html;
+    document.getElementById('iter-count').innerText = solver.iteration;
+    document.getElementById('total-cost').innerText = solver.calculateCost().toFixed(2);
+}
+
+const bind = (id, key, valId, transform = v => v) => {
+    const el = document.getElementById(id);
+    el.oninput = () => {
+        SETTINGS[key] = transform(el.value);
+        document.getElementById(valId).innerText = SETTINGS[key];
+        render();
+    };
+};
+
+bind('set-spacing', 'spacing', 'val-spacing', Number);
+bind('set-min-angle', 'minAngle', 'val-min-angle', Number);
+bind('set-collision', 'collisionWeight', 'val-collision', Number);
+bind('set-aversion', 'aversionWeight', 'val-aversion', Number);
+document.getElementById('set-decay').onchange = (e) => {
+    SETTINGS.useDecay = e.target.checked;
+    document.getElementById('val-decay').innerText = SETTINGS.useDecay ? "Enabled" : "Disabled";
+};
+
+document.getElementById('step-btn').onclick = () => { solver.step(); render(); };
+document.getElementById('reset-btn').onclick = () => { solver.reset(); render(); };
+document.getElementById('auto-btn').onclick = () => {
+    autoSolving = !autoSolving;
+    const btn = document.getElementById('auto-btn');
+    btn.innerText = autoSolving ? "Stop" : "Auto-Solve";
+    btn.classList.toggle('bg-red-600', autoSolving);
+    if (autoSolving) loop();
+};
+
+function loop() {
+    if (!autoSolving) return;
+    for (let i = 0; i < 15; i++) solver.step();
+    render();
+    requestAnimationFrame(loop);
+}
+
+render();
+</script>
+</body>
+</html>
