@@ -7,14 +7,12 @@ export const optimizeStep = ({
   traces,
   problem,
   iteration,
-  maxIterations,
 }: {
   traces: TraceState[]
   problem: TraceProblem
   iteration: number
-  maxIterations: number
 }): TraceState[] => {
-  const stepSize = 0.2 * (1 - iteration / maxIterations)
+  const stepSize = 0.5 * 0.98 ** iteration
   const nextTraces = [...traces]
 
   for (let i = 0; i < nextTraces.length; i++) {

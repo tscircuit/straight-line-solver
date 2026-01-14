@@ -5,12 +5,15 @@ import { visualizeTraceProblem } from "./visualizeTraceProblem"
 import { getDouble45Path } from "./StraightLine/getDouble45Path"
 import { optimizeStep } from "./StraightLine/optimizeStep"
 import type { TraceState } from "./StraightLine/types"
+import { calculateCost } from "./StraightLine/calculateCost"
 
 export class StraightLineSolver extends BaseSolver {
   outputTraces: OutputTrace[] = []
   private traces: TraceState[] = []
   private iteration = 0
   private maxIterations = 200
+  private lastCost: number | null = null
+  private stepsWithoutImprovement = 0
 
   constructor(private problem: TraceProblem) {
     super()
@@ -25,7 +28,7 @@ export class StraightLineSolver extends BaseSolver {
   }
 
   override _step() {
-    if (this.iteration >= this.maxIterations) {
+    if (this.iteration >= this.maxIterations || this.stepsWithoutImprovement >= 10) {
       this.solved = true
       return
     }
@@ -34,8 +37,19 @@ export class StraightLineSolver extends BaseSolver {
       traces: this.traces,
       problem: this.problem,
       iteration: this.iteration,
-      maxIterations: this.maxIterations,
     })
+
+    const currentCost = calculateCost({ traces: this.traces, problem: this.problem })
+
+    if (this.lastCost !== null) {
+      const improvement = (this.lastCost - currentCost) / this.lastCost
+      if (improvement < 0.001) {
+        this.stepsWithoutImprovement++
+      } else {
+        this.stepsWithoutImprovement = 0
+      }
+    }
+    this.lastCost = currentCost
 
     this.iteration++
     this.outputTraces = this.traces.map((t, i) => ({
