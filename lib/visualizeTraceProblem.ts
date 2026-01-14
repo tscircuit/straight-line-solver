@@ -1,5 +1,5 @@
 import type { GraphicsObject } from "graphics-debug"
-import type { TraceProblem, OutputTrace } from "./types.ts"
+import type { TraceProblem, OutputTrace } from "./types"
 
 const hashString = (str: string) => {
   let hash = 0
@@ -26,7 +26,7 @@ export const visualizeTraceProblem = (
     coordinateSystem: "cartesian",
     points: [],
     texts: [],
-    title: "45° Trace Problem",
+    title: "Straight Line Solver",
   } as Required<GraphicsObject>
 
   graphics.lines.push({
@@ -40,16 +40,16 @@ export const visualizeTraceProblem = (
     strokeColor: "rgba(0, 0, 0, 0.1)",
   })
 
-  for (const waypointPair of problem.waypointPairs) {
+  for (const wp of problem.waypointPairs) {
     graphics.points.push({
-      ...waypointPair.start,
-      label: `start ${waypointPair.networkId ?? ""}`,
-      color: getColorForNetworkId(waypointPair.networkId),
+      ...wp.start,
+      label: `start ${wp.networkId ?? ""}`,
+      color: getColorForNetworkId(wp.networkId),
     })
     graphics.points.push({
-      ...waypointPair.end,
-      label: `end ${waypointPair.networkId ?? ""}`,
-      color: getColorForNetworkId(waypointPair.networkId),
+      ...wp.end,
+      label: `end ${wp.networkId ?? ""}`,
+      color: getColorForNetworkId(wp.networkId),
     })
   }
 
@@ -58,9 +58,6 @@ export const visualizeTraceProblem = (
       center: obstacle.center,
       width: obstacle.maxX - obstacle.minX,
       height: obstacle.maxY - obstacle.minY,
-      fill: "rgba(128, 128, 128, 0.3)",
-      stroke: "rgba(128, 128, 128, 0.8)",
-      label: `netId: ${obstacle.networkId}`,
     })
   }
 

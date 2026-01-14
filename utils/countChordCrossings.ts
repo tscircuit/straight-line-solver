@@ -1,4 +1,4 @@
-import type { WaypointPair } from "../lib/45DegreeTraceSolver/types.ts"
+import type { WaypointPair } from "../lib/types.ts"
 
 /**
  * Maps a boundary point to a 1D perimeter coordinate.

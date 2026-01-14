@@ -1,4 +1,4 @@
-import type { TraceProblem } from "../45DegreeTraceSolver/types"
+import type { TraceProblem } from "../types"
 import type { TraceState } from "./types"
 import { getDouble45Path } from "./getDouble45Path"
 import { calculateCost } from "./calculateCost"

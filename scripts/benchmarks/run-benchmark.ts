@@ -1,5 +1,5 @@
 import { generateRandomProblem } from "../../utils/index.ts"
-import { FortyFiveDegreeTraceSolver } from "../../lib/45DegreeTraceSolver.ts"
+import { StraightLineSolver } from "../../lib/Straightline.ts"
 
 const NUM_PROBLEMS = 25
 const MIN_WAYPOINT_PAIRS = 2
@@ -38,7 +38,7 @@ function runBenchmark() {
       minSpacing: 5,
     })
 
-    const solver = new FortyFiveDegreeTraceSolver(problem)
+    const solver = new StraightLineSolver(problem)
 
     solver.solve()
 

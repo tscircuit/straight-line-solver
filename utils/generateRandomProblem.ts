@@ -3,7 +3,7 @@ import type {
   TraceProblem,
   Obstacle,
   WaypointPair,
-} from "../lib/45DegreeTraceSolver/types.ts"
+} from "../lib/types.ts"
 import { perimeterT } from "./countChordCrossings.ts"
 import { createRng } from "./createRng.ts"
 import { randomBoundaryPoint } from "./randomBoundaryPoint.ts"
