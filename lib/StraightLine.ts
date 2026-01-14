@@ -70,9 +70,6 @@ export class StraightLineSolver extends BaseSolver {
       this.stepsWithoutImprovement >= 10
     ) {
       this.solved = true
-      if (this.stepsWithoutImprovement >= 10) {
-        console.log("Solved: No improvement for 10 iterations")
-      }
       return
     }
 
