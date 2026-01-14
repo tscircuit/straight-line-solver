@@ -1,11 +1,11 @@
 import { BaseSolver } from "@tscircuit/solver-utils"
-import type { TraceProblem, OutputTrace } from "./types"
 import type { GraphicsObject } from "graphics-debug"
-import { visualizeTraceProblem } from "./visualizeTraceProblem"
+import { calculateCost } from "./StraightLine/calculateCost"
 import { getDouble45Path } from "./StraightLine/getDouble45Path"
 import { optimizeStep } from "./StraightLine/optimizeStep"
 import type { TraceState } from "./StraightLine/types"
-import { calculateCost } from "./StraightLine/calculateCost"
+import type { OutputTrace, TraceProblem } from "./types"
+import { visualizeTraceProblem } from "./visualizeTraceProblem"
 
 export class StraightLineSolver extends BaseSolver {
   outputTraces: OutputTrace[] = []
@@ -18,7 +18,11 @@ export class StraightLineSolver extends BaseSolver {
   constructor(private problem: TraceProblem) {
     super()
     this.traces = this.problem.waypointPairs.map((wp) => {
-      const d = Math.min(Math.abs(wp.end.x - wp.start.x), Math.abs(wp.end.y - wp.start.y)) / 2
+      const d =
+        Math.min(
+          Math.abs(wp.end.x - wp.start.x),
+          Math.abs(wp.end.y - wp.start.y),
+        ) / 2
       return {
         d,
         networkId: wp.networkId,
@@ -28,8 +32,14 @@ export class StraightLineSolver extends BaseSolver {
   }
 
   override _step() {
-    if (this.iteration >= this.maxIterations || this.stepsWithoutImprovement >= 10) {
+    if (
+      this.iteration >= this.maxIterations ||
+      this.stepsWithoutImprovement >= 10
+    ) {
       this.solved = true
+      if (this.stepsWithoutImprovement >= 10) {
+        console.log("Solved: No improvement for 10 iterations")
+      }
       return
     }
 
@@ -39,7 +49,10 @@ export class StraightLineSolver extends BaseSolver {
       iteration: this.iteration,
     })
 
-    const currentCost = calculateCost({ traces: this.traces, problem: this.problem })
+    const currentCost = calculateCost({
+      traces: this.traces,
+      problem: this.problem,
+    })
 
     if (this.lastCost !== null) {
       const improvement = (this.lastCost - currentCost) / this.lastCost
