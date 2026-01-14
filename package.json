@@ -1,6 +1,6 @@
 {
-  "name": "@tscircuit/45-degree-trace-solver",
-  "description": "A solver for routing PCB traces using 45-degree angled paths with elbow joints",
+  "name": "@tscircuit/straight-line-solver",
+  "description": "An iterative PCB trace router using a 1-parameter (d) 45-degree path solver.",
   "main": "dist/index.js",
   "version": "0.0.10",
   "type": "module",
