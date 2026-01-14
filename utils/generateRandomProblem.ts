@@ -1,9 +1,5 @@
 import type { Bounds } from "@tscircuit/math-utils"
-import type {
-  TraceProblem,
-  Obstacle,
-  WaypointPair,
-} from "../lib/types.ts"
+import type { TraceProblem, Obstacle, WaypointPair } from "../lib/types.ts"
 import { perimeterT } from "./countChordCrossings.ts"
 import { createRng } from "./createRng.ts"
 import { randomBoundaryPoint } from "./randomBoundaryPoint.ts"

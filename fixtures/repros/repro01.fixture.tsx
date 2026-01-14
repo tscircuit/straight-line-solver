@@ -5,9 +5,7 @@ import problem from "../../tests/repros/repro01-input.json"
 export default () => {
   return (
     <GenericSolverDebugger
-      createSolver={() =>
-        new StraightLineSolver(problem as TraceProblem)
-      }
+      createSolver={() => new StraightLineSolver(problem as TraceProblem)}
     />
   )
 }

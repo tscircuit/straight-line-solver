@@ -43,9 +43,7 @@ export default () => {
       </div>
       <GenericSolverDebugger
         key={`${randomSeed}-${numWaypointPairs}`}
-        createSolver={() =>
-          new StraightLineSolver(problem as TraceProblem)
-        }
+        createSolver={() => new StraightLineSolver(problem as TraceProblem)}
       />
     </div>
   )
