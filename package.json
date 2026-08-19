@@ -1,5 +1,9 @@
 {
   "name": "@tscircuit/straight-line-solver",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/tscircuit/straight-line-solver.git"
+  },
   "description": "An iterative PCB trace router using a 1-parameter (d) 45-degree path solver.",
   "main": "dist/index.js",
   "version": "0.0.10",
