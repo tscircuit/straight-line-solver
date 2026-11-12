@@ -20,13 +20,18 @@ export const getDouble45Path = ({
 
   if (uBend) {
     const dir = Math.sign(uBend)
+    // Keep both diagonal legs within the available major-axis span.
+    const maxOffset = Math.max(adx, ady) / 2
+    const bendOffset = Math.max(-maxOffset, Math.min(maxOffset, dOffset))
     if (adx > ady) {
       // horizontal-ish
-      const y_mid = (start.y + end.y) / 2 + dOffset * dir
+      const y_mid = (start.y + end.y) / 2 + bendOffset * dir
       const p1_y_dist = Math.abs(y_mid - start.y)
       const p1 = { x: start.x + p1_y_dist * sx, y: y_mid }
       const p2_y_dist = Math.abs(y_mid - end.y)
       const p2 = { x: end.x - p2_y_dist * sx, y: y_mid }
+
+      if (bendOffset !== dOffset) return [start, p1, end]
 
       if (sx > 0 ? p1.x > p2.x : p1.x < p2.x) {
         const x_mid = (start.x + end.x) / 2
@@ -35,11 +40,13 @@ export const getDouble45Path = ({
       return [start, p1, p2, end]
     } else {
       // vertical-ish
-      const x_mid = (start.x + end.x) / 2 + dOffset * dir
+      const x_mid = (start.x + end.x) / 2 + bendOffset * dir
       const p1_x_dist = Math.abs(x_mid - start.x)
       const p1 = { x: x_mid, y: start.y + p1_x_dist * sy }
       const p2_x_dist = Math.abs(x_mid - end.x)
       const p2 = { x: x_mid, y: end.y - p2_x_dist * sy }
+
+      if (bendOffset !== dOffset) return [start, p1, end]
 
       if (sy > 0 ? p1.y > p2.y : p1.y < p2.y) {
         const y_mid = (start.y + end.y) / 2
